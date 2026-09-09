@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>⚡ Dashboard</title>
+
+  <style>
+    body {
+      margin: 0;
+      font-family: Inter, sans-serif;
+      background: #0b0f19;
+      color: #e6edf3;
+      display: flex;
+    }
+
+    .sidebar {
+      width: 200px;
+      background: #111827;
+      height: 100vh;
+      padding: 20px;
+    }
+
+    .main {
+      flex: 1;
+      padding: 20px;
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+
+    input {
+      padding: 10px;
+      border-radius: 8px;
+      border: none;
+      background: #1f2937;
+      color: white;
+      width: 250px;
+    }
+
+    .stats {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .card {
+      flex: 1;
+      padding: 15px;
+      border-radius: 10px;
+      background: #111827;
+      text-align: center;
+    }
+
+    .table-box {
+      background: #111827;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th, td {
+      padding: 12px;
+    }
+
+    th {
+      background: #1f2937;
+    }
+
+    tr:hover {
+      background: #1a2235;
+    }
+
+    button {
+      border: none;
+      padding: 6px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-right: 5px;
+    }
+
+    .copy { background: #16a34a; }
+    .view { background: #2563eb; }
+    .delete { background: #dc2626; }
+
+    .online { color: #22c55e; }
+    .offline { color: #ef4444; }
+
+    /* animations */
+    .fade-in { animation: fadeIn 0.3s; }
+    .fade-out { animation: fadeOut 0.3s forwards; }
+
+    @keyframes fadeIn {
+      from { opacity:0; transform:translateY(10px); }
+      to { opacity:1; transform:translateY(0); }
+    }
+
+    @keyframes fadeOut {
+      to { opacity:0; transform:translateX(40px); }
+    }
+
+    /* viewer */
+    #viewer {
+      position: fixed;
+      right: 0;
+      top: 0;
+      width: 350px;
+      height: 100%;
+      background: #0f172a;
+      transform: translateX(100%);
+      transition: 0.3s;
+      padding: 15px;
+      overflow: auto;
+    }
+
+    #viewer.active {
+      transform: translateX(0);
+    }
+
+    pre {
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-size: 12px;
+      background: #020617;
+      padding: 10px;
+      border-radius: 6px;
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="sidebar">
+  <h2>⚡ Dashboard</h2>
+</div>
+
+<div class="main">
+
+  <div class="topbar">
+    <input id="search" placeholder="Search ID...">
+  </div>
+
+  <div class="stats">
+    <div class="card">Online <br><b id="onlineCount">0</b></div>
+    <div class="card">Offline <br><b id="offlineCount">0</b></div>
+    <div class="card">Total <br><b id="totalCount">0</b></div>
+  </div>
+
+  <div class="table-box">
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Status</th>
+          <th>Last Seen</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="data"></tbody>
+    </table>
+  </div>
+
+</div>
+
+<div id="viewer">
+  <h3>Session</h3>
+  <pre id="viewerContent"></pre>
+  <button onclick="closeViewer()">Close</button>
+</div>
+
+<script>
+let allSessions = [];
+
+async function loadSessions() {
+  const res = await fetch('/admin-api/sessions'); // ✅ FIXED
+  const data = await res.json();
+  allSessions = data;
+  render(data);
+}
+
+function render(list) {
+  const tbody = document.getElementById("data");
+  tbody.innerHTML = "";
+
+  let online = 0, offline = 0;
+
+  list.forEach(s => {
+    s.isOnline ? online++ : offline++;
+
+    const row = document.createElement("tr");
+    row.classList.add("fade-in");
+
+    row.innerHTML = `
+      <td>${s.shortId}</td>
+      <td class="${s.isOnline ? 'online':'offline'}">
+        ${s.isOnline ? "● Online":"● Offline"}
+      </td>
+      <td>${timeAgo(s.lastSeen)}</td>
+      <td>
+        <button class="copy" onclick="copySession('${s.shortId}')">📋</button>
+        <button class="view" onclick="viewSession('${s.shortId}')">👁</button>
+        <button class="delete" onclick="deleteSession('${s.shortId}', this)">🗑</button>
+      </td>
+    `;
+
+    tbody.appendChild(row);
+  });
+
+  onlineCount.innerText = online;
+  offlineCount.innerText = offline;
+  totalCount.innerText = list.length;
+}
+
+function timeAgo(date) {
+  const diff = Math.floor((Date.now() - new Date(date)) / 1000);
+  if (diff < 60) return diff + "s ago";
+  if (diff < 3600) return Math.floor(diff/60) + "m ago";
+  if (diff < 86400) return Math.floor(diff/3600) + "h ago";
+  return Math.floor(diff/86400) + "d ago";
+}
+
+search.oninput = e => {
+  const val = e.target.value.toLowerCase();
+  render(allSessions.filter(s => s.shortId.toLowerCase().includes(val)));
+};
+
+async function copySession(id) {
+  const res = await fetch('/session/' + id);
+  const text = await res.text();
+  navigator.clipboard.writeText(text);
+}
+
+async function viewSession(id) {
+  const res = await fetch('/admin-api/session/' + id); // ✅ FIXED
+  const data = await res.json();
+
+  viewerContent.textContent = JSON.stringify(data, null, 2);
+  viewer.classList.add("active");
+}
+
+function closeViewer() {
+  viewer.classList.remove("active");
+}
+
+async function deleteSession(id, btn) {
+  const row = btn.closest("tr");
+
+  const res = await fetch('/admin-api/session/' + id, { // ✅ FIXED
+    method: 'DELETE'
+  });
+
+  const data = await res.json();
+
+  if (data.success) {
+    row.classList.add("fade-out");
+
+    setTimeout(() => {
+      allSessions = allSessions.filter(s => s.shortId !== id);
+      render(allSessions);
+    }, 300);
+  }
+}
+
+loadSessions();
+setInterval(loadSessions, 5000);
+</script>
+
+</body>
+</html>

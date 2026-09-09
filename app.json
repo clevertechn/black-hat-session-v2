@@ -1,0 +1,17 @@
+{
+    "name": "BLACKHAT Session Generator",
+    "description": "Web Session Generator",
+    "logo": "https://files.catbox.moe/wfh6gr.jpg",
+    "repository": "https://github.com/clevertechn/black-hat-session",
+    "keywords": ["Clever-Techn"],
+    "success_url": "/", 
+    "buildpacks": [{ "url": "https://github.com/heroku/heroku-buildpack-nodejs#latest" } ],
+    "env": {      
+      "PORT": {
+        "description": "Port for web app.4000,5000,3000... any!",
+        "value": "50900",
+        "required": false 
+      }
+    }   
+
+}

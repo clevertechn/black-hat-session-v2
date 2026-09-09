@@ -1,0 +1,18 @@
+# Exported from Render on 2026-03-17T10:35:20Z
+version: "1"
+projects:
+- name: My project
+  environments:
+  - name: Production
+    services:
+    - type: web
+      name: blackhat-session
+      runtime: node
+      repo: https://github.com/clever-techn/black-hat-session
+      plan: free
+      region: oregon
+      buildCommand: yarn install
+      startCommand: node ./index.js
+      domains:
+      - sessions.clevertech.qzz.io
+      autoDeployTrigger: commit
