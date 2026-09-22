@@ -33,10 +33,19 @@ app.get("/qr", (req, res) => {
 
 try {
     const { qrRoute, pairRoute } = require("./routes");
-    app.use("/qr", qrRoute);
-    app.use("/code", pairRoute);
+    if (qrRoute) app.use("/qr", qrRoute);
+    if (pairRoute) {
+        app.use("/code", pairRoute);
+    } else {
+        app.get("/code", (req, res) => {
+            res.status(503).json({ error: "Pairing service is temporarily unavailable" });
+        });
+    }
 } catch (error) {
     console.error("Optional WhatsApp routes failed to load:", error.message);
+    app.get("/code", (req, res) => {
+        res.status(503).json({ error: "Pairing service is temporarily unavailable" });
+    });
 }
 
 app.get("/session/:id", async (req, res) => {
