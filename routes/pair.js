@@ -2,6 +2,9 @@
  * Baileys is ESM. This project uses CommonJS,
  * so load Baileys with dynamic import().
  */
+"use strict";
+
+const fs = require("node:fs");
 let baileysPromise;
 
 function getBaileys() {
