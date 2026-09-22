@@ -3,7 +3,6 @@ const path = require("path");
 const bodyParser = require("body-parser");
 const config = require("./config");
 const { PORT } = config;
-const { qrRoute, pairRoute } = require("./routes");
 const { init, isConfigured, getSession } = require("./gift/sessionStore");
 const app = express();
 app.set("json spaces", 2);
@@ -31,8 +30,14 @@ app.get("/qr", (req, res) => {
         if (err) res.status(500).send("Error serving page: " + err.message);
     });
 });
-app.use("/qr", qrRoute);
-app.use("/code", pairRoute);
+
+try {
+    const { qrRoute, pairRoute } = require("./routes");
+    app.use("/qr", qrRoute);
+    app.use("/code", pairRoute);
+} catch (error) {
+    console.error("Optional WhatsApp routes failed to load:", error.message);
+}
 
 app.get("/session/:id", async (req, res) => {
     if (!isConfigured()) {
