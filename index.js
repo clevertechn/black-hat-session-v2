@@ -60,11 +60,17 @@ app.get("/health", (req, res) => {
     });
 });
 
-app.listen(PORT, () => {
-    console.log(
-        `\nDeployment Successful!\n\n black-hat-Session-Server Running on http://localhost:${PORT}`,
-    );
-    init(config);
-});
+if (process.env.VERCEL) {
+    init(config).catch((error) => {
+        console.error("Session storage initialization failed:", error.message);
+    });
+} else {
+    app.listen(PORT, () => {
+        console.log(
+            `\nDeployment Successful!\n\n black-hat-Session-Server Running on http://localhost:${PORT}`,
+        );
+        init(config);
+    });
+}
 
 module.exports = app;

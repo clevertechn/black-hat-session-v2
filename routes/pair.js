@@ -22,7 +22,7 @@ const {
     Browsers
 } = require("@whiskeysockets/baileys");
 
-const sessionDir = path.join(__dirname, "session");
+const sessionDir = path.join(process.env.TMPDIR || "/tmp", "black-hat-session");
 
 router.get('/', async (req, res) => {
     const id = giftedId();
