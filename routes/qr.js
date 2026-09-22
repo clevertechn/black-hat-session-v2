@@ -1,5 +1,36 @@
-const { 
-    giftedId,
+/*
+ * Baileys is ESM. This project uses CommonJS,
+ * so load Baileys with dynamic import().
+ */
+let baileysPromise;
+
+function getBaileys() {
+    if (!baileysPromise) {
+        baileysPromise = import("@whiskeysockets/baileys");
+    }
+    return baileysPromise;
+}
+
+
+const sessionDir = path.join(__dirname, "session");
+
+router.get('/session', async (req, res) => {
+    const id = giftedId();
+    const sessionType = (req.query.type || 'short').toLowerCase();
+    let responseSent = false;
+    let sessionCleanedUp = false;
+
+    async function cleanUpSession() {
+        if (!sessionCleanedUp) {
+            await removeFile(path.join(sessionDir, id));
+            sessionCleanedUp = true;
+        }
+    }
+
+    async function GIFTED_QR_CODE() {
+
+    const {
+        giftedId,
     removeFile
 } = require('../gift');
 const { SESSION_PREFIX, GC_JID, BOT_REPO, WA_CHANNEL, MSG_FOOTER } = require('../config');
@@ -19,24 +50,9 @@ const {
     delay,
     fetchLatestBaileysVersion,
     fetchLatestWaWebVersion
-} = require("@whiskeysockets/baileys");
+    } = await getBaileys();
 
-const sessionDir = path.join(__dirname, "session");
 
-router.get('/session', async (req, res) => {
-    const id = giftedId();
-    const sessionType = (req.query.type || 'short').toLowerCase();
-    let responseSent = false;
-    let sessionCleanedUp = false;
-
-    async function cleanUpSession() {
-        if (!sessionCleanedUp) {
-            await removeFile(path.join(sessionDir, id));
-            sessionCleanedUp = true;
-        }
-    }
-
-    async function GIFTED_QR_CODE() {
         let version;
         try {
             const live = await fetchLatestWaWebVersion();

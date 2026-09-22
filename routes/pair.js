@@ -1,26 +1,16 @@
-const { 
-    giftedId,
-    removeFile,
-    generateRandomCode
-} = require('../gift');
-const { SESSION_PREFIX, GC_JID, BOT_REPO, WA_CHANNEL, MSG_FOOTER } = require('../config');
-const { isConfigured, saveSession } = require('../gift/sessionStore');
-const zlib = require('zlib');
-const express = require('express');
-const fs = require('fs');
-const path = require('path');
-let router = express.Router();
-const pino = require("pino");
-const { sendButtons } = require('../gifted-buttons');
-const {
-    default: giftedConnect,
-    useMultiFileAuthState,
-    delay,
-    fetchLatestBaileysVersion,
-    fetchLatestWaWebVersion,
-    makeCacheableSignalKeyStore,
-    Browsers
-} = require("@whiskeysockets/baileys");
+/*
+ * Baileys is ESM. This project uses CommonJS,
+ * so load Baileys with dynamic import().
+ */
+let baileysPromise;
+
+function getBaileys() {
+    if (!baileysPromise) {
+        baileysPromise = import("@whiskeysockets/baileys");
+    }
+    return baileysPromise;
+}
+
 
 const sessionDir = path.join(process.env.TMPDIR || "/tmp", "black-hat-session");
 
@@ -43,6 +33,32 @@ router.get('/', async (req, res) => {
     }
 
     async function GIFTED_PAIR_CODE() {
+
+    const {
+        giftedId,
+    removeFile,
+    generateRandomCode
+} = require('../gift');
+const { SESSION_PREFIX, GC_JID, BOT_REPO, WA_CHANNEL, MSG_FOOTER } = require('../config');
+const { isConfigured, saveSession } = require('../gift/sessionStore');
+const zlib = require('zlib');
+const express = require('express');
+const fs = require('fs');
+const path = require('path');
+let router = express.Router();
+const pino = require("pino");
+const { sendButtons } = require('../gifted-buttons');
+const {
+    default: giftedConnect,
+    useMultiFileAuthState,
+    delay,
+    fetchLatestBaileysVersion,
+    fetchLatestWaWebVersion,
+    makeCacheableSignalKeyStore,
+    Browsers
+    } = await getBaileys();
+
+
         let version;
         try {
             const live = await fetchLatestWaWebVersion();
