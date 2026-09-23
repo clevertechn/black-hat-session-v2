@@ -84,7 +84,7 @@ app.get("/health", (req, res) => {
     res.json({
         status: 200,
         success: true,
-        service: "Gifted Session",
+        service: "Black Hat Session",
         storage: isConfigured() ? "database" : "inline-zlib",
         timestamp: new Date().toISOString(),
     });
