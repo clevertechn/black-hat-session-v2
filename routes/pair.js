@@ -9,6 +9,7 @@ const path = require("node:path");
 const express = require("express");
 const zlib = require("zlib");
 const pino = require("pino");
+const { waitUntil } = require("@vercel/functions");
 const {
     giftedId,
     removeFile,
@@ -260,7 +261,14 @@ const {
         // invocation window, accounting for connection/retry time already used.
         const maxInvocationMs = process.env.VERCEL ? 58000 : 120000;
         const remainingMs = Math.max(0, maxInvocationMs - (Date.now() - invocationStartedAt));
-        await new Promise((resolve) => setTimeout(resolve, remainingMs));
+        const keepSocketAlive = new Promise((resolve) => setTimeout(resolve, remainingMs));
+        if (process.env.VERCEL) {
+            // Vercel otherwise may suspend the function once the JSON response
+            // has been sent, even though WhatsApp is still waiting for approval.
+            waitUntil(keepSocketAlive);
+        } else {
+            await keepSocketAlive;
+        }
     } catch (finalError) {
         console.error("Final error:", finalError);
         await cleanUpSession();
