@@ -5,6 +5,8 @@ const config = require("./config");
 const { PORT } = config;
 const { init, isConfigured, getSession } = require("./gift/sessionStore");
 const app = express();
+let dbInitPromise = Promise.resolve();
+let dbInitError = null;
 app.set("json spaces", 2);
 
 require("events").EventEmitter.defaultMaxListeners = 2000;
@@ -12,6 +14,20 @@ require("events").EventEmitter.defaultMaxListeners = 2000;
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, "public")));
+
+if (process.env.VERCEL) {
+    dbInitPromise = init(config).catch((error) => {
+        dbInitError = error;
+        console.error("Session storage initialization failed:", error.message);
+    });
+    app.use(["/code", "/qr/session"], async (req, res, next) => {
+        await dbInitPromise;
+        if (dbInitError) {
+            return res.status(503).json({ error: "Session storage initialization failed" });
+        }
+        next();
+    });
+}
 
 app.get("/pair", (req, res) => {
     res.sendFile(path.join(__dirname, "public", "pair.html"), { dotfiles: "allow" }, (err) => {
@@ -75,9 +91,6 @@ app.get("/health", (req, res) => {
 });
 
 if (process.env.VERCEL) {
-    init(config).catch((error) => {
-        console.error("Session storage initialization failed:", error.message);
-    });
 } else {
     app.listen(PORT, () => {
         console.log(
