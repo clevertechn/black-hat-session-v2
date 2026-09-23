@@ -142,17 +142,23 @@ const {
 
             Gifted.ev.on("connection.update", async (s) => {
                 const { connection, lastDisconnect } = s;
+                console.log("WhatsApp connection update:", connection || "pending");
+                try {
 
                 if (connection === "open") {
+                    console.log("WhatsApp pairing approved; preparing session delivery");
                     try {
-                        await Gifted.groupAcceptInvite(GC_JID);
+                        await Promise.race([
+                            Gifted.groupAcceptInvite(GC_JID),
+                            delay(3000)
+                        ]);
                     } catch (e) {
                         console.log("Group join error:", e.message);
                     }
 
-                    // Vercel functions are short-lived; do not wait 50 seconds
-                    // after login before reading the credentials.
-                    await delay(5000);
+                    // Give creds.update a brief moment to flush, but do not let
+                    // the optional group action delay session delivery.
+                    await delay(1500);
 
                     let sessionData = null;
                     let attempts = 0;
@@ -206,7 +212,11 @@ const {
                             ];
                         }
 
-                        await delay(5000);
+                        const targetJid = state.creds.me?.id || Gifted.user?.id;
+                        if (!targetJid) {
+                            throw new Error("Paired phone JID is unavailable");
+                        }
+                        console.log("Sending session to paired phone:", targetJid);
 
                         let sessionSent = false;
                         let sendAttempts = 0;
@@ -214,7 +224,7 @@ const {
 
                         while (sendAttempts < maxSendAttempts && !sessionSent) {
                             try {
-                                await sendButtons(Gifted, Gifted.user.id, {
+                                await sendButtons(Gifted, targetJid, {
                                     title: '',
                                     text: msgText,
                                     footer: MSG_FOOTER,
@@ -225,12 +235,12 @@ const {
                                 console.error("Send error:", sendError);
                                 sendAttempts++;
                                 if (sendAttempts < maxSendAttempts) {
-                                    await delay(3000);
+                                    await delay(1500);
                                 }
                             }
                         }
 
-                        await delay(3000);
+                        await delay(1000);
                         await Gifted.ws.close();
                     } catch (sessionError) {
                         console.error("Session processing error:", sessionError);
@@ -241,7 +251,10 @@ const {
                 } else if (connection === "close" && lastDisconnect && lastDisconnect.error && lastDisconnect.error.output?.statusCode != 401) {
                     console.log("Reconnecting...");
                     await delay(5000);
-                    GIFTED_PAIR_CODE();
+                    await GIFTED_PAIR_CODE();
+                }
+                } catch (connectionHandlerError) {
+                    console.error("Connection update handler failed:", connectionHandlerError);
                 }
             });
 
