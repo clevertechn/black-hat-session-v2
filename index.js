@@ -32,19 +32,19 @@ app.get("/qr", (req, res) => {
 });
 
 try {
-    const { qrRoute, pairRoute, qrRouteError, pairRouteError } = require("./routes");
+    const { qrRoute, pairRoute } = require("./routes");
     if (qrRoute) app.use("/qr", qrRoute);
     if (pairRoute) {
         app.use("/code", pairRoute);
     } else {
         app.get("/code", (req, res) => {
-            res.status(503).json({ error: "Pairing service is temporarily unavailable", detail: pairRouteError || undefined });
+            res.status(503).json({ error: "Pairing service is temporarily unavailable" });
         });
     }
 } catch (error) {
     console.error("Optional WhatsApp routes failed to load:", error.message);
     app.get("/code", (req, res) => {
-        res.status(503).json({ error: "Pairing service is temporarily unavailable", detail: pairRouteError || undefined });
+        res.status(503).json({ error: "Pairing service is temporarily unavailable" });
     });
 }
 
@@ -70,12 +70,6 @@ app.get("/health", (req, res) => {
         success: true,
         service: "Gifted Session",
         storage: isConfigured() ? "database" : "inline-zlib",
-        routes: {
-            pair: !!pairRoute,
-            qr: !!qrRoute,
-            pairError: pairRouteError || null,
-            qrError: qrRouteError || null,
-        },
         timestamp: new Date().toISOString(),
     });
 });
