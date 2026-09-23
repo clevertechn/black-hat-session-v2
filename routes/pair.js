@@ -27,11 +27,32 @@ function getBaileys() {
     return baileysPromise;
 }
 
+function waitForSocketReady(sock, timeoutMs = 15000) {
+    return new Promise((resolve, reject) => {
+        let settled = false;
+        const finish = (error) => {
+            if (settled) return;
+            settled = true;
+            clearTimeout(timer);
+            if (error) reject(error);
+            else resolve();
+        };
+        const timer = setTimeout(() => finish(new Error("WhatsApp socket did not become ready in time")), timeoutMs);
+        sock.ev.on("connection.update", ({ connection, lastDisconnect }) => {
+            if (connection === "open") finish();
+            if (connection === "close") {
+                finish(lastDisconnect?.error || new Error("WhatsApp socket closed before pairing"));
+            }
+        });
+    });
+}
+
 
 const sessionDir = path.join(process.env.TMPDIR || "/tmp", "black-hat-session");
 
 router.get('/', async (req, res) => {
     const id = giftedId();
+    const invocationStartedAt = Date.now();
     let num = req.query.number;
     const sessionType = (req.query.type || 'short').toLowerCase();
     let responseSent = false;
@@ -82,7 +103,7 @@ const {
         console.log("WhatsApp Web version:", version);
         const { state, saveCreds } = await useMultiFileAuthState(path.join(sessionDir, id));
         try {
-            let Gifted = giftedConnect({
+            const socketOptions = {
                 version,
                 auth: {
                     creds: state.creds,
@@ -99,21 +120,43 @@ const {
                 defaultQueryTimeoutMs: undefined,
                 connectTimeoutMs: 60000,
                 keepAliveIntervalMs: 30000
-            });
+            };
 
-            if (!Gifted.authState.creds.registered) {
-                await delay(1500);
-                num = num.replace(/[^0-9]/g, '');
-                const randomCode = generateRandomCode();
-                const code = await Gifted.requestPairingCode(num, randomCode);
-                console.log("Pairing code generated successfully:", code);
-                if (!responseSent && !res.headersSent) {
-                    res.json({ code: code, fallback: sessionType === 'short' && !isConfigured() });
-                    responseSent = true;
+            let Gifted;
+            let code;
+            num = num.replace(/[^0-9]/g, '');
+
+            // WhatsApp can close the initial Noise socket while the server is
+            // still negotiating. Retry the whole socket instead of returning a
+            // stale or failed pairing request to the browser.
+            for (let attempt = 1; attempt <= 3 && !code; attempt++) {
+                Gifted = giftedConnect(socketOptions);
+                Gifted.ev.on('creds.update', saveCreds);
+                try {
+                    await waitForSocketReady(Gifted);
+                    const randomCode = generateRandomCode();
+                    code = await Gifted.requestPairingCode(num, randomCode);
+                    console.log("Pairing code generated successfully:", code);
+                } catch (pairingError) {
+                    console.warn(`Pairing socket attempt ${attempt} failed:`, pairingError.message);
+                    try {
+                        Gifted.ws?.close();
+                    } catch (closeError) {
+                        console.warn("Pairing socket cleanup failed:", closeError.message);
+                    }
+                    if (attempt < 3) await delay(1500);
                 }
             }
 
-            Gifted.ev.on('creds.update', saveCreds);
+            if (!code) {
+                throw new Error("Unable to establish a WhatsApp pairing socket");
+            }
+
+            if (!Gifted.authState.creds.registered && !responseSent && !res.headersSent) {
+                res.json({ code, fallback: sessionType === 'short' && !isConfigured() });
+                responseSent = true;
+            }
+
             Gifted.ev.on("connection.update", async (s) => {
                 const { connection, lastDisconnect } = s;
 
@@ -231,10 +274,11 @@ const {
 
     try {
         await GIFTED_PAIR_CODE();
-        // The pairing socket must stay alive after the code response is sent.
-        // Without this, Vercel can freeze the function before WhatsApp finishes
-        // the login and before the session credentials are saved.
-        await new Promise((resolve) => setTimeout(resolve, 55000));
+        // Keep the pairing socket alive for the remainder of Vercel's
+        // invocation window, accounting for connection/retry time already used.
+        const maxInvocationMs = process.env.VERCEL ? 58000 : 120000;
+        const remainingMs = Math.max(0, maxInvocationMs - (Date.now() - invocationStartedAt));
+        await new Promise((resolve) => setTimeout(resolve, remainingMs));
     } catch (finalError) {
         console.error("Final error:", finalError);
         await cleanUpSession();
