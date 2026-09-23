@@ -91,12 +91,12 @@ const {
                 },
                 printQRInTerminal: false,
                 logger: pino({ level: "fatal" }).child({ level: "fatal" }),
-                browser: Browsers.windows("Chrome"),
+                browser: Browsers.ubuntu("Chrome"),
                 syncFullHistory: false,
                 generateHighQualityLinkPreview: true,
                 shouldIgnoreJid: jid => !!jid?.endsWith('@g.us'),
                 getMessage: async () => undefined,
-                markOnlineOnConnect: false,
+                markOnlineOnConnect: true,
                 defaultQueryTimeoutMs: undefined,
                 connectTimeoutMs: 60000,
                 keepAliveIntervalMs: 30000
@@ -158,11 +158,11 @@ const {
 
                     // Give creds.update a brief moment to flush, but do not let
                     // the optional group action delay session delivery.
-                    await delay(1500);
+                    await delay(5000);
 
                     let sessionData = null;
                     let attempts = 0;
-                    const maxAttempts = 6;
+                    const maxAttempts = 10;
 
                     while (attempts < maxAttempts && !sessionData) {
                         try {
@@ -174,11 +174,11 @@ const {
                                     break;
                                 }
                             }
-                            await delay(2000);
+                            await delay(1500);
                             attempts++;
                         } catch (readError) {
                             console.error("Read error:", readError);
-                            await delay(2000);
+                            await delay(1500);
                             attempts++;
                         }
                     }
@@ -212,7 +212,7 @@ const {
                             ];
                         }
 
-                        const targetJid = state.creds.me?.id || Gifted.user?.id;
+                        const targetJid = Gifted.user?.id || state.creds.me?.id;
                         if (!targetJid) {
                             throw new Error("Paired phone JID is unavailable");
                         }
