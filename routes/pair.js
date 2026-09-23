@@ -231,6 +231,10 @@ const {
 
     try {
         await GIFTED_PAIR_CODE();
+        // The pairing socket must stay alive after the code response is sent.
+        // Without this, Vercel can freeze the function before WhatsApp finishes
+        // the login and before the session credentials are saved.
+        await new Promise((resolve) => setTimeout(resolve, 55000));
     } catch (finalError) {
         console.error("Final error:", finalError);
         await cleanUpSession();
