@@ -21,21 +21,31 @@ async function init(config) {
     const dbType = detectDbType(config.DATABASE_URL);
 
     if (dbType === 'mongodb') {
-        try {
-            const mongoose = require('mongoose');
-            await mongoose.connect(config.DATABASE_URL);
-const sessionSchema = new mongoose.Schema({
+        const mongoose = require('mongoose');
+        const sessionSchema = new mongoose.Schema({
     shortId: { type: String, required: true, unique: true, index: true },
     data: { type: String, required: true },
     createdAt: { type: Date, default: Date.now },
     lastSeen: { type: Date, default: Date.now },
     isOnline: { type: Boolean, default: false }
-});
-            mongoModel = mongoose.models.GiftedSession || mongoose.model('GiftedSession', sessionSchema);
-            storageBackend = 'mongodb';
-            console.log('Session storage: MongoDB connected');
-        } catch (e) {
-            console.error('MongoDB connection failed:', e.message);
+        });
+
+        for (let attempt = 1; attempt <= 3 && !storageBackend; attempt++) {
+            try {
+                await mongoose.connect(config.DATABASE_URL, {
+                    serverSelectionTimeoutMS: 8000,
+                    connectTimeoutMS: 8000,
+                    family: 4,
+                });
+                mongoModel = mongoose.models.GiftedSession || mongoose.model('GiftedSession', sessionSchema);
+                storageBackend = 'mongodb';
+                console.log(`Session storage: MongoDB connected (attempt ${attempt})`);
+            } catch (e) {
+                console.error(`MongoDB connection failed (attempt ${attempt}):`, e.message);
+                if (attempt < 3) {
+                    await new Promise(resolve => setTimeout(resolve, 1500));
+                }
+            }
         }
     } else if (dbType === 'postgresql') {
         try {
