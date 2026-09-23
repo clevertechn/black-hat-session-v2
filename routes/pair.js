@@ -124,11 +124,13 @@ const {
                         console.log("Group join error:", e.message);
                     }
 
-                    await delay(50000);
+                    // Vercel functions are short-lived; do not wait 50 seconds
+                    // after login before reading the credentials.
+                    await delay(5000);
 
                     let sessionData = null;
                     let attempts = 0;
-                    const maxAttempts = 15;
+                    const maxAttempts = 6;
 
                     while (attempts < maxAttempts && !sessionData) {
                         try {
@@ -140,7 +142,7 @@ const {
                                     break;
                                 }
                             }
-                            await delay(8000);
+                            await delay(2000);
                             attempts++;
                         } catch (readError) {
                             console.error("Read error:", readError);
