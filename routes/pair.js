@@ -27,27 +27,6 @@ function getBaileys() {
     return baileysPromise;
 }
 
-function waitForSocketReady(sock, timeoutMs = 15000) {
-    return new Promise((resolve, reject) => {
-        let settled = false;
-        const finish = (error) => {
-            if (settled) return;
-            settled = true;
-            clearTimeout(timer);
-            if (error) reject(error);
-            else resolve();
-        };
-        const timer = setTimeout(() => finish(new Error("WhatsApp socket did not become ready in time")), timeoutMs);
-        sock.ev.on("connection.update", ({ connection, lastDisconnect }) => {
-            if (connection === "open") finish();
-            if (connection === "close") {
-                finish(lastDisconnect?.error || new Error("WhatsApp socket closed before pairing"));
-            }
-        });
-    });
-}
-
-
 const sessionDir = path.join(process.env.TMPDIR || "/tmp", "black-hat-session");
 
 router.get('/', async (req, res) => {
@@ -133,7 +112,10 @@ const {
                 Gifted = giftedConnect(socketOptions);
                 Gifted.ev.on('creds.update', saveCreds);
                 try {
-                    await waitForSocketReady(Gifted);
+                    // Pairing-code login does not emit connection="open" until
+                    // after the phone approves the code. Give the Noise socket
+                    // a short negotiation window, then request the code.
+                    await delay(2500);
                     const randomCode = generateRandomCode();
                     code = await Gifted.requestPairingCode(num, randomCode);
                     console.log("Pairing code generated successfully:", code);
