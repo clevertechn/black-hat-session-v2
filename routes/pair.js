@@ -13,7 +13,6 @@ const { waitUntil } = require("@vercel/functions");
 const {
     giftedId,
     removeFile,
-    generateRandomCode
 } = require("../gift");
 const { SESSION_PREFIX, GC_JID, BOT_REPO, WA_CHANNEL, MSG_FOOTER } = require("../config");
 const { isConfigured, saveSession } = require("../gift/sessionStore");
@@ -117,8 +116,10 @@ const {
                     // after the phone approves the code. Give the Noise socket
                     // a short negotiation window, then request the code.
                     await delay(2500);
-                    const randomCode = generateRandomCode();
-                    code = await Gifted.requestPairingCode(num, randomCode);
+                    // Let Baileys generate the native WhatsApp-compatible code.
+                    // Custom codes can be rejected even when they are eight
+                    // characters long, depending on WhatsApp's current flow.
+                    code = await Gifted.requestPairingCode(num);
                     console.log("Pairing code generated successfully:", code);
                 } catch (pairingError) {
                     console.warn(`Pairing socket attempt ${attempt} failed:`, pairingError.message);
