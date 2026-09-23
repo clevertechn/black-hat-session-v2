@@ -5,6 +5,19 @@
 "use strict";
 
 const fs = require("node:fs");
+const path = require("node:path");
+const express = require("express");
+const zlib = require("zlib");
+const pino = require("pino");
+const {
+    giftedId,
+    removeFile,
+    generateRandomCode
+} = require("../gift");
+const { SESSION_PREFIX, GC_JID, BOT_REPO, WA_CHANNEL, MSG_FOOTER } = require("../config");
+const { isConfigured, saveSession } = require("../gift/sessionStore");
+const { sendButtons } = require("../gifted-buttons");
+const router = express.Router();
 let baileysPromise;
 
 function getBaileys() {
@@ -24,6 +37,13 @@ router.get('/', async (req, res) => {
     let responseSent = false;
     let sessionCleanedUp = false;
 
+    if (typeof num !== 'string' || !/^\d{8,15}$/.test(num.replace(/[^0-9]/g, ''))) {
+        return res.status(400).json({
+            error: "A valid phone number is required",
+            usage: "/code?number=2547XXXXXXXX&type=short"
+        });
+    }
+
     async function cleanUpSession() {
         if (!sessionCleanedUp) {
             try {
@@ -37,20 +57,6 @@ router.get('/', async (req, res) => {
 
     async function GIFTED_PAIR_CODE() {
 
-    const {
-        giftedId,
-    removeFile,
-    generateRandomCode
-} = require('../gift');
-const { SESSION_PREFIX, GC_JID, BOT_REPO, WA_CHANNEL, MSG_FOOTER } = require('../config');
-const { isConfigured, saveSession } = require('../gift/sessionStore');
-const zlib = require('zlib');
-const express = require('express');
-const fs = require('fs');
-const path = require('path');
-let router = express.Router();
-const pino = require("pino");
-const { sendButtons } = require('../gifted-buttons');
 const {
     default: giftedConnect,
     useMultiFileAuthState,

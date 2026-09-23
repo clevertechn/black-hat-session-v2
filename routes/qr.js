@@ -5,6 +5,16 @@
 "use strict";
 
 const fs = require("node:fs");
+const path = require("node:path");
+const QRCode = require("qrcode");
+const express = require("express");
+const zlib = require("zlib");
+const pino = require("pino");
+const { giftedId, removeFile } = require("../gift");
+const { SESSION_PREFIX, GC_JID, BOT_REPO, WA_CHANNEL, MSG_FOOTER } = require("../config");
+const { isConfigured, saveSession } = require("../gift/sessionStore");
+const { sendButtons } = require("../gifted-buttons");
+const router = express.Router();
 let baileysPromise;
 
 function getBaileys() {
@@ -32,20 +42,6 @@ router.get('/session', async (req, res) => {
 
     async function GIFTED_QR_CODE() {
 
-    const {
-        giftedId,
-    removeFile
-} = require('../gift');
-const { SESSION_PREFIX, GC_JID, BOT_REPO, WA_CHANNEL, MSG_FOOTER } = require('../config');
-const { isConfigured, saveSession } = require('../gift/sessionStore');
-const QRCode = require('qrcode');
-const express = require('express');
-const zlib = require('zlib');
-const path = require('path');
-const fs = require('fs');
-let router = express.Router();
-const pino = require("pino");
-const { sendButtons } = require('../gifted-buttons');
 const {
     default: giftedConnect,
     useMultiFileAuthState,
