@@ -287,7 +287,7 @@ const {
         await GIFTED_PAIR_CODE();
         // Keep the pairing socket alive for the remainder of Vercel's
         // invocation window, accounting for connection/retry time already used.
-        const maxInvocationMs = process.env.VERCEL ? 58000 : 120000;
+        const maxInvocationMs = process.env.VERCEL ? 298000 : 120000;
         const remainingMs = Math.max(0, maxInvocationMs - (Date.now() - invocationStartedAt));
         const keepSocketAlive = new Promise((resolve) => setTimeout(resolve, remainingMs));
         if (process.env.VERCEL) {

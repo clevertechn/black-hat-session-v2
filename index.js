@@ -80,7 +80,8 @@ app.get("/session/:id", async (req, res) => {
     }
 });
 
-app.get("/health", (req, res) => {
+app.get("/health", async (req, res) => {
+    if (process.env.VERCEL) await dbInitPromise;
     res.json({
         status: 200,
         success: true,
