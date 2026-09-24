@@ -16,7 +16,7 @@ const {
 } = require("../gift");
 const { SESSION_PREFIX, GC_JID, BOT_REPO, WA_CHANNEL, MSG_FOOTER } = require("../config");
 const { isConfigured, saveSession } = require("../gift/sessionStore");
-const { sendButtons } = require("gifted-btns");
+const { sendButtons } = require("../vendor/gifted-btns/gifted");
 const router = express.Router();
 let baileysPromise;
 
