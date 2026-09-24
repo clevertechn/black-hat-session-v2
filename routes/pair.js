@@ -196,14 +196,20 @@ const {
 
                         let msgText, msgButtons;
                         if (isConfigured() && sessionType === 'short') {
-                            const shortId = await saveSession(fullSession);
-                            const shortSession = `${SESSION_PREFIX}${shortId}`;
-                            msgText = `*SESSION ID ✅*\n\n${shortSession}`;
-                            msgButtons = [
+                            try {
+                                const shortId = await saveSession(fullSession);
+                                const shortSession = `${SESSION_PREFIX}${shortId}`;
+                                msgText = `*SESSION ID ✅*\n\n${shortSession}`;
+                                msgButtons = [
                                 { name: 'cta_copy', buttonParamsJson: JSON.stringify({ display_text: 'Copy Session', copy_code: shortSession }) },
                                 { name: 'cta_url', buttonParamsJson: JSON.stringify({ display_text: 'Visit Bot Repo', url: BOT_REPO }) },
                                 { name: 'cta_url', buttonParamsJson: JSON.stringify({ display_text: 'Join WaChannel', url: WA_CHANNEL }) }
-                            ];
+                                ];
+                            } catch (storageError) {
+                                console.error("Short session storage failed; sending full session:", storageError.message);
+                                msgText = `*SESSION ID ✅*\n\n${fullSession}`;
+                                msgButtons = [];
+                            }
                         } else {
                             msgText = `*SESSION ID ✅*\n\n${fullSession}`;
                             msgButtons = [
@@ -221,22 +227,30 @@ const {
 
                         let sessionSent = false;
                         let sendAttempts = 0;
-                        const maxSendAttempts = 5;
+                        const maxSendAttempts = 3;
 
                         while (sendAttempts < maxSendAttempts && !sessionSent) {
                             try {
-                                await sendButtons(Gifted, targetJid, {
-                                    title: '',
-                                    text: msgText,
-                                    footer: MSG_FOOTER,
-                                    buttons: msgButtons
-                                });
+                                if (msgButtons.length) {
+                                    await sendButtons(Gifted, targetJid, {
+                                        title: '', text: msgText, footer: MSG_FOOTER, buttons: msgButtons
+                                    });
+                                    console.log("Session buttons sent successfully");
+                                } else {
+                                    await Gifted.sendMessage(targetJid, { text: msgText });
+                                    console.log("Session text sent successfully");
+                                }
                                 sessionSent = true;
-                            } catch (sendError) {
-                                console.error("Send error:", sendError);
-                                sendAttempts++;
-                                if (sendAttempts < maxSendAttempts) {
-                                    await delay(1500);
+                            } catch (buttonError) {
+                                console.warn("Session button send failed:", buttonError.message);
+                                try {
+                                    await Gifted.sendMessage(targetJid, { text: msgText });
+                                    sessionSent = true;
+                                    console.log("Session text fallback sent successfully");
+                                } catch (textError) {
+                                    console.error("Session text fallback failed:", textError.message);
+                                    sendAttempts++;
+                                    if (sendAttempts < maxSendAttempts) await delay(1500);
                                 }
                             }
                         }
