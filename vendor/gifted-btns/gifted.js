@@ -1,6 +1,7 @@
 // GIFTED-TECH@2025
 
 let lx2V;
+require('./gift');
 !(function () {
   const sIZH = Array.prototype.slice.call(arguments);
   return eval(
